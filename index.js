@@ -160,11 +160,11 @@ async function donate() {
   if (increased > 10) {
     const quantity = increased * 0.05;
     await sendEIDOS(account, "thinkmachine", quantity, 'donated from ' + account);
-    console.info(
-      `Newly mined ${increased.toFixed(4)} EIDOS, donated ${quantity.toFixed(
-        4
-      )} EIDOS to the author thinkmachine`
-    );
+    // console.info(
+    //   `Newly mined ${increased.toFixed(4)} EIDOS, donated ${quantity.toFixed(
+    //     4
+    //   )} EIDOS to the author thinkmachine`
+    // );
     // prev_eidos_balance -= parseFloat(quantity.toFixed(4));
     prev_eidos_balance = await queryEIDOSBalance(account, getRandomAPI().rpc, {
       fetch
