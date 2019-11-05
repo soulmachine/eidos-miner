@@ -1,0 +1,2 @@
+# eidos-miner
+EIDOS miner
