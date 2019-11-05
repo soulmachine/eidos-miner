@@ -1,0 +1,28 @@
+{
+  "name": "eidos-miner",
+  "version": "1.0.0",
+  "description": "EIDOS miner",
+  "main": "index.js",
+  "bin": "index.js",
+  "scripts": {
+    "start": "node ./index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/soulmachne/docker-images/eidos-miner"
+  },
+  "keywords": [
+    "EIDOS",
+    "miner",
+    "EOS"
+  ],
+  "author": "soulmachine",
+  "license": "MIT",
+  "dependencies": {
+    "eosjs": "^20.0.0",
+    "node-fetch": "^2.6.0",
+    "sleep": "^6.1.0",
+    "yargs": "^14.2.0"
+  }
+}
