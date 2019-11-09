@@ -17,10 +17,10 @@ const argv = require("yargs")
     description: "Your private key",
     type: "string"
   })
-  .option("num_threads", {
-    description: "The number of parallel threads",
+  .option("num_actions", {
+    description: "The number of actions per transaction",
     type: "number",
-    default: 10
+    default: 5
   })
   .option("donation", {
     description: "Donate 5% of mined EIDOS to the author",
@@ -212,7 +212,7 @@ async function run() {
     }
 
     console.info('Sending a transaction...');
-    actions = createActions(7, account);
+    actions = createActions(argv.num_actions, account);
     await runTransaction(actions, api);
     if (argv.donation) {
       await donate();
