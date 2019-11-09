@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const fetch = require('node-fetch');  // node only; not needed in browsers
-const sleep = require('sleep');  
 
 const { Api, JsonRpc, RpcError } = require('eosjs');
 const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig');      // development only
@@ -26,7 +25,7 @@ const argv = require("yargs")
   .option("donation", {
     description: "Donate 5% of mined EIDOS to the author",
     type: "boolean",
-    default: true
+    default: false
   })
   .demandOption(['private_key', 'account'], 'Please provide both private_key and account')
   .check(function (argv) {
@@ -202,49 +201,28 @@ async function runTransaction(actions, api) {
 }
 
 async function run() {
-  const api = getRandomAPI();
+  try {
+    const api = getRandomAPI();
 
-  const cpuRate = await getCPURate(account, api.rpc);
-  console.log(`CPU rate: ${cpuRate}`);
-  if (cpuRate > 0.99) {
-    console.warn('CPU is too busy, sleep for 15 seconds.')
-    sleep.sleep(15);
-    return;
-  }
-
-  actions = createActions(20, account);
-  await runTransaction(actions, api);
-  if (argv.donation) {
-    await donate();
-  }
-}
-
-async function main() {
-  const eos_balance = await queryEOSBalance(account, getRandomAPI().rpc, { fetch });
-  console.log(`EOS balance: ${eos_balance}`);
-
-  const eidos_balance = await queryEIDOSBalance(account, getRandomAPI().rpc, { fetch });
-  prev_eidos_balance = eidos_balance;
-  console.log(`EIDOS balance: ${eidos_balance}`);
-
-  if (eos_balance < 0.001) {
-    console.error('Your EOS balance is too low, must be greater than 0.001 EOS, please deposit more EOS to your account.')
-    sleep.sleep(60);  // wait for 1 minute so that you have time to deposit
-    return;
-  }
-
-  while(true) {
-    try {
-      const promises = [];
-      for (i = 0; i < argv.num_threads; i++) {
-        promises.push(run());
-      }
-      await Promise.all(promises);
-    } catch (e) {
-      console.error(e);
+    const cpuRate = await getCPURate(account, api.rpc);
+    console.info(`CPU rate: ${cpuRate}`);
+    if (cpuRate > 0.9999) {  // 1- (CPU Usage of one transaction / Total time rented)
+      console.warn('CPU is too busy, give up mining this time.')
+      return;
     }
+
+    console.info('Sending a transaction...');
+    actions = createActions(7, account);
+    await runTransaction(actions, api);
+    if (argv.donation) {
+      await donate();
+    }
+  } catch (e) {
+    console.error(e);
   }
 }
+
+
 
 (async () => {
   // let producers = await get_producers();
@@ -256,5 +234,18 @@ async function main() {
   //   return api;
   // });
 
-  await main();
+  const eos_balance = await queryEOSBalance(account, getRandomAPI().rpc, { fetch });
+  console.log(`EOS balance: ${eos_balance}`);
+
+  const eidos_balance = await queryEIDOSBalance(account, getRandomAPI().rpc, { fetch });
+  prev_eidos_balance = eidos_balance;
+  console.log(`EIDOS balance: ${eidos_balance}`);
+
+  if (eos_balance < 0.001) {
+    console.error('Your EOS balance is too low, must be greater than 0.001 EOS, please deposit more EOS to your account.')
+    await new Promise(resolve => setTimeout(resolve, 60000));  // wait for 1 minute so that you have time to deposit
+    return;
+  }
+
+  setInterval(run, 1000);
 })();

@@ -22,7 +22,6 @@
   "dependencies": {
     "eosjs": "^20.0.0",
     "node-fetch": "^2.6.0",
-    "sleep": "^6.1.0",
     "yargs": "^14.2.0"
   }
 }
