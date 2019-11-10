@@ -275,7 +275,7 @@ async function run() {
   const cpu_rate = await get_cpu_rate(account, get_random_api().rpc);
   console.info(`CPU rate: ${cpu_rate}`);
   if (cpu_rate < 0.9) {
-    num_actions = 5;
+    num_actions = 16;
   } else {
     num_actions = NUM_ACTIONS_MIN;
   }
