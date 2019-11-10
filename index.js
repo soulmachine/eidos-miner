@@ -204,6 +204,11 @@ let prev_cpu_rate;
 
 async function adjust_num_actions() {
   const cpu_rate = await get_cpu_rate(account, get_random_api().rpc);
+  if (cpu_rate < 0.9) {
+    num_actions *= 2;
+    console.info('Doubled num_actions');
+    return;
+  }
   if (cpu_rate > prev_cpu_rate) {
     if (num_actions > NUM_ACTIONS_MIN) {
       num_actions -= 1;
@@ -238,7 +243,7 @@ async function run() {
     );
 
     console.info('Sending a transaction...');
-    actions = create_actions(argv.num_actions, account);
+    actions = create_actions(num_actions, account);
     await run_transaction(actions, api);
 
     const current_balance = await query_eidos_balance(
