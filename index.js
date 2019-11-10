@@ -273,7 +273,7 @@ async function run() {
   console.info(`EIDOS balance: ${prev_eidos_balance}`);
 
   const cpu_rate = await get_cpu_rate(account, get_random_api().rpc);
-  console.info(`CPU rate: ${cpu_rate}`);
+  console.info(`CPU rate: ${(Math.floor(cpu_rate * 1000) / 10).toFixed(1)}%`);
   if (cpu_rate < 0.9) {
     num_actions = 16;
   } else {
