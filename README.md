@@ -1,25 +1,25 @@
 # EIDOS-miner
 
-EIDOS miner，无敌矿机，效率超越一千台手机，全网第一。
+EIDOS miner, 1000 times faster than your phone!
 
-Start mining(启动挖矿):
+## Start mining
 
-    # Interactive mode
-    docker run -it --rm --name eidos-miner soulmachine/eidos-miner --account your_account --private_key your_private_key
-    # Daemon mode
-    docker run -d--name eidos-miner soulmachine/eidos-miner --account your_account --private_key your_private_key
+    npx eidos-miner --account your_eos_account --private_key your_private_key
 
-Stop mining(停止挖矿):
+## Mine faster
 
-    docker stop eidos-miner
+Since the EIDOS smart contract distributes 20 EIDSO per second, so fast will not help your get more, ideally, you should let your CPU consuming speed be equal to recover speed.
 
+This miner sends a transaction per second, with 5 actions by default.
 
-## Build docker image
+If you have huge CPU, you can make it faster by increasing `num_actions`(default 5):
 
-    docker build -t soulmachine/eidos-miner .
+    npx eidos-miner --account your_eos_account --private_key your_private_key --num_actions 14
 
+## Help
 
-## Run locally
+    npx eidos-miner -h
 
-    npm install
-    node ./index.js --account your_account --private_key your_private_key
+## Donation
+
+    This tool will donate 5% of mined EIDOS to the author by default, if you don't want to donate, you can disable it by passing `--donation false`.

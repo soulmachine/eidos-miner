@@ -20,6 +20,7 @@
   "author": "soulmachine",
   "license": "MIT",
   "dependencies": {
+    "assert": "^2.0.0",
     "eosjs": "^20.0.0",
     "node-fetch": "^2.6.0",
     "yargs": "^14.2.0"

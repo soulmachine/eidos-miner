@@ -1,47 +1,46 @@
 #!/usr/bin/env node
 
-const fetch = require('node-fetch');  // node only; not needed in browsers
+const assert = require('assert');
+const fetch = require('node-fetch'); // node only; not needed in browsers
 
 const { Api, JsonRpc, RpcError } = require('eosjs');
-const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig');      // development only
-const { TextEncoder, TextDecoder } = require('util');                   // node only; native TextEncoder/Decoder
+const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig'); // development only
+const { TextEncoder, TextDecoder } = require('util'); // node only; native TextEncoder/Decoder
 const { isValidPrivate, privateToPublic } = require('eosjs-ecc');
 
-
-const argv = require("yargs")
-  .option("account", {
-    description: "Your EOS account, must be 12 letters",
-    type: "string"
+const argv = require('yargs')
+  .option('account', {
+    description: 'Your EOS account, must be 12 letters',
+    type: 'string',
   })
-  .option("private_key", {
-    description: "Your private key",
-    type: "string"
+  .option('private_key', {
+    description: 'Your private key',
+    type: 'string',
   })
-  .option("num_actions", {
-    description: "The number of actions per transaction",
-    type: "number",
-    default: 5
+  .option('num_actions', {
+    description: 'The number of actions per transaction',
+    type: 'number',
+    default: 5,
   })
-  .option("donation", {
-    description: "Donate 5% of mined EIDOS to the author",
-    type: "boolean",
-    default: false
+  .option('donation', {
+    description: 'Donate 5% of mined EIDOS to the author',
+    type: 'boolean',
+    default: true,
   })
-  .demandOption(['private_key', 'account'], 'Please provide both private_key and account')
-  .check(function (argv) {
-    if(isValidPrivate(argv.private_key)) {
+  .demandOption(
+    ['private_key', 'account'],
+    'Please provide both private_key and account',
+  )
+  .check(function(argv) {
+    if (isValidPrivate(argv.private_key)) {
       return true;
     } else {
-      throw(new Error('Error: private_key is invalid!'));
+      throw new Error('Error: private_key is invalid!');
     }
-  })
-  .argv;
+  }).argv;
 
 const account = argv.account;
-const publicKey = privateToPublic(argv.private_key);
 const signatureProvider = new JsSignatureProvider([argv.private_key]);
-// const rpc = new JsonRpc('https://mainnet.meet.one:443', { fetch });
-// const api = new Api({ rpc, signatureProvider, textDecoder: new TextDecoder(), textEncoder: new TextEncoder() });
 
 const BP_SEED_LIST = [
   'https://mainnet.meet.one',
@@ -50,76 +49,62 @@ const BP_SEED_LIST = [
   'https://node.betdice.one',
 ];
 
-let prev_eidos_balance = 0;
-
-
-async function get_producers() {
-  const index = Math.floor(Math.random() * BP_SEED_LIST.length);
-  const rpc = new JsonRpc(BP_SEED_LIST[index], { fetch });
+const APIs = BP_SEED_LIST.map(function(url) {
+  const rpc = new JsonRpc(url, { fetch });
   const api = new Api({
     rpc,
     signatureProvider,
     textDecoder: new TextDecoder(),
-    textEncoder: new TextEncoder()
+    textEncoder: new TextEncoder(),
   });
-
-  const response = await api.rpc.get_producers();
-  const all_producers = response.rows;
-  const active_producers = all_producers
-    .filter(p => p.is_active)
-    .filter(p => p.url.startsWith("https"))
-    .map(p => p.url);
-
-  let producers = [];
-  for (const url of active_producers) {
-    try {
-      await rpc.get_currency_balance("eosio.token", account, "EOS");
-      producers.push(url);
-      console.error(url + " is OK")
-    } catch (e) {
-      console.error(url + " is BAD")
-    }
-  }
-  return producers;
-}
-
-const APIs = BP_SEED_LIST.map(function (url) {
-  const rpc = new JsonRpc(url, { fetch });
-  const api = new Api({ rpc, signatureProvider, textDecoder: new TextDecoder(), textEncoder: new TextEncoder() });
   return api;
 });
 
-function getRandomAPI() {
+function get_random_api() {
   const index = Math.floor(Math.random() * APIs.length);
   return APIs[index];
 }
 
-async function queryEOSBalance(account, rpc) {
-  const balance_info = await rpc.get_currency_balance('eosio.token', account, 'EOS');
+async function query_eos_balance(account, rpc) {
+  const balance_info = await rpc.get_currency_balance(
+    'eosio.token',
+    account,
+    'EOS',
+  );
   const balance = parseFloat(balance_info[0].split(' ')[0]);
   return balance;
 }
 
-async function queryEIDOSBalance(account, rpc) {
-  const balance_info = await rpc.get_currency_balance('eidosonecoin', account, 'EIDOS');
+async function query_eidos_balance(account, rpc) {
+  const balance_info = await rpc.get_currency_balance(
+    'eidosonecoin',
+    account,
+    'EIDOS',
+  );
   const balance = parseFloat(balance_info[0].split(' ')[0]);
   return balance;
 }
 
-async function getCPURate(account, rpc) {
+async function get_cpu_rate(account, rpc) {
   const info = await rpc.get_account(account);
   return info.cpu_limit.used / info.cpu_limit.max;
 }
 
-function createAction(account, quantity=0.0003) {
-  quantity = quantity.toFixed(4);
+function create_action(account, quantity = 0.0003) {
+  if (typeof quantity === 'number') {
+    quantity = quantity.toFixed(4);
+  }
+  assert(typeof quantity === 'string');
+
   return {
     account: 'eosio.token',
     name: 'transfer',
-    authorization: [{
-      actor: account,
-      permission: 'active',
-    }],
+    authorization: [
+      {
+        actor: account,
+        permission: 'active',
+      },
+    ],
     data: {
       from: account,
       to: 'eidosonecoin',
@@ -129,15 +114,20 @@ function createAction(account, quantity=0.0003) {
   };
 }
 
-async function sendEIDOS(from, to, quantity, memo='') {
-  quantity = quantity.toFixed(4);
+async function send_eidos(from, to, quantity, memo = '') {
+  if (typeof quantity === 'number') {
+    quantity = quantity.toFixed(4);
+  }
+  assert(typeof quantity === 'string');
   const action = {
     account: 'eidosonecoin',
     name: 'transfer',
-    authorization: [{
-      actor: from,
-      permission: 'active',
-    }],
+    authorization: [
+      {
+        actor: from,
+        permission: 'active',
+      },
+    ],
     data: {
       from: from,
       to: to,
@@ -145,52 +135,60 @@ async function sendEIDOS(from, to, quantity, memo='') {
       memo: memo,
     },
   };
-  const api = getRandomAPI();
-  return await runTransaction([action], api);
+  const api = get_random_api();
+  return await run_transaction([action], api);
 }
 
+let prev_eidos_balance = 0;
+
 async function donate() {
-  const current_eidos_balance = await queryEIDOSBalance(
+  const current_eidos_balance = await query_eidos_balance(
     account,
-    getRandomAPI().rpc,
-    { fetch }
+    get_random_api().rpc,
+    { fetch },
   );
   const increased = current_eidos_balance - prev_eidos_balance;
-  if (increased > 10) {
-    const quantity = increased * 0.05;
-    await sendEIDOS(account, "thinkmachine", quantity, 'donated from ' + account);
-    // console.info(
-    //   `Newly mined ${increased.toFixed(4)} EIDOS, donated ${quantity.toFixed(
-    //     4
-    //   )} EIDOS to the author thinkmachine`
-    // );
-    // prev_eidos_balance -= parseFloat(quantity.toFixed(4));
-    prev_eidos_balance = await queryEIDOSBalance(account, getRandomAPI().rpc, {
-      fetch
-    });
+  const eidos_to_donate = (increased * 0.05).toFixed(4);
+  if (eidos_to_donate != '0.0000') {
+    await send_eidos(
+      account,
+      'thinkmachine',
+      eidos_to_donate,
+      'donated from ' + account,
+    );
+    console.info('Donated ' + eidos_to_donate + ' EIDOS to the author.');
+    prev_eidos_balance = await query_eidos_balance(
+      account,
+      get_random_api().rpc,
+      {
+        fetch,
+      },
+    );
   }
 }
 
-function createActions(numActions, account) {
-  const quantities = Array(numActions).fill().map(() => (Math.ceil(Math.random() * 7)*0.0001))
-  return quantities.map(quantity => createAction(account, quantity))
+function create_actions(num_actions, account) {
+  const quantities = Array(num_actions)
+    .fill()
+    .map(() => Math.ceil(Math.random() * 3) * 0.0001);
+  return quantities.map(quantity => create_action(account, quantity));
 }
 
-async function runTransaction(actions, api) {
+async function run_transaction(actions, api) {
   try {
     const result = await api.transact(
       {
-        actions: actions
+        actions: actions,
       },
       {
         blocksBehind: 3,
-        expireSeconds: 300
-      }
+        expireSeconds: 300,
+      },
     );
     return result;
   } catch (e) {
-    if (!e.toString().includes("duplicate transaction")) {
-      console.log("\nCaught exception: " + e);
+    if (!e.toString().includes('duplicate transaction')) {
+      console.log('\nCaught exception: ' + e);
       if (e instanceof RpcError) {
         console.log(JSON.stringify(e.json, null, 2));
       } else {
@@ -202,50 +200,69 @@ async function runTransaction(actions, api) {
 
 async function run() {
   try {
-    const api = getRandomAPI();
+    const api = get_random_api();
 
-    const cpuRate = await getCPURate(account, api.rpc);
-    console.info(`CPU rate: ${cpuRate}`);
-    if (cpuRate > 0.9999) {  // 1- (CPU Usage of one transaction / Total time rented)
-      console.warn('CPU is too busy, give up mining this time.')
+    const cpu_rate = await get_cpu_rate(account, api.rpc);
+    console.info(`CPU rate: ${cpu_rate}`);
+    if (cpu_rate > 0.9999) {
+      // 1- (CPU Usage of one transaction / Total time rented)
+      console.warn(
+        '\x1b[31mCPU is too busy, will not send out transaction this time.\x1b[0m',
+      );
       return;
     }
 
+    const prev_balance = await query_eidos_balance(
+      account,
+      get_random_api().rpc,
+      { fetch },
+    );
+
     console.info('Sending a transaction...');
-    actions = createActions(argv.num_actions, account);
-    await runTransaction(actions, api);
-    if (argv.donation) {
-      await donate();
+    actions = create_actions(argv.num_actions, account);
+    await run_transaction(actions, api);
+
+    const current_balance = await query_eidos_balance(
+      account,
+      get_random_api().rpc,
+      { fetch },
+    );
+    const increased = (current_balance - prev_balance).toFixed(4);
+    if (increased != '0.0000') {
+      console.info(
+        '\x1b[32mMined ' +
+          (current_balance - prev_balance).toFixed(4) +
+          ' EIDOS !!!\x1b[0m',
+      );
     }
   } catch (e) {
     console.error(e);
   }
 }
 
-
-
 (async () => {
-  // let producers = await get_producers();
-  // producers = producers.concat(BP_SEED_LIST);
-  // console.log(producers);
-  // APIs = producers.map(function (url) {
-  //   const rpc = new JsonRpc(url, { fetch });
-  //   const api = new Api({ rpc, signatureProvider, textDecoder: new TextDecoder(), textEncoder: new TextEncoder() });
-  //   return api;
-  // });
-
-  const eos_balance = await queryEOSBalance(account, getRandomAPI().rpc, { fetch });
+  const eos_balance = await query_eos_balance(account, get_random_api().rpc, {
+    fetch,
+  });
   console.log(`EOS balance: ${eos_balance}`);
 
-  const eidos_balance = await queryEIDOSBalance(account, getRandomAPI().rpc, { fetch });
-  prev_eidos_balance = eidos_balance;
-  console.log(`EIDOS balance: ${eidos_balance}`);
+  prev_eidos_balance = await query_eidos_balance(
+    account,
+    get_random_api().rpc,
+    { fetch },
+  );
+  console.log(`EIDOS balance: ${prev_eidos_balance}`);
 
   if (eos_balance < 0.001) {
-    console.error('Your EOS balance is too low, must be greater than 0.001 EOS, please deposit more EOS to your account.')
-    await new Promise(resolve => setTimeout(resolve, 60000));  // wait for 1 minute so that you have time to deposit
+    console.error(
+      'Your EOS balance is too low, must be greater than 0.001 EOS, please deposit more EOS to your account.',
+    );
+    await new Promise(resolve => setTimeout(resolve, 60000)); // wait for 1 minute so that you have enough time to deposit EOS to your account
     return;
   }
 
   setInterval(run, 1000);
+  if (argv.donation) {
+    setInterval(donate, 10000); // 10 seconds
+  }
 })();
