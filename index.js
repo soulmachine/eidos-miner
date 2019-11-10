@@ -17,11 +17,6 @@ const argv = require('yargs')
     description: 'Your private key',
     type: 'string',
   })
-  .option('num_actions', {
-    description: 'The number of actions per transaction',
-    type: 'number',
-    default: 5,
-  })
   .option('donation', {
     description: 'Donate 5% of mined EIDOS to the author',
     type: 'boolean',
@@ -203,6 +198,26 @@ async function run_transaction(actions, api) {
   }
 }
 
+const NUM_ACTIONS_MIN = 1;
+let num_actions;
+let prev_cpu_rate;
+
+async function adjust_num_actions() {
+  const cpu_rate = await get_cpu_rate(account, get_random_api().rpc);
+  if (cpu_rate > prev_cpu_rate) {
+    if (num_actions > NUM_ACTIONS_MIN) {
+      num_actions -= 1;
+      console.info('Decreased num_actions by 1');
+    }
+  } else if (cpu_rate < prev_cpu_rate) {
+    num_actions += 1;
+    console.info('Increased num_actions by 1');
+  } else {
+    // do nothing
+  }
+  prev_cpu_rate = cpu_rate;
+}
+
 async function run() {
   try {
     const api = get_random_api();
@@ -248,14 +263,23 @@ async function run() {
   const eos_balance = await query_eos_balance(account, get_random_api().rpc, {
     fetch,
   });
-  console.log(`EOS balance: ${eos_balance}`);
+  console.info(`EOS balance: ${eos_balance}`);
 
   prev_eidos_balance = await query_eidos_balance(
     account,
     get_random_api().rpc,
     { fetch },
   );
-  console.log(`EIDOS balance: ${prev_eidos_balance}`);
+  console.info(`EIDOS balance: ${prev_eidos_balance}`);
+
+  const cpu_rate = await get_cpu_rate(account, get_random_api().rpc);
+  console.info(`CPU rate: ${cpu_rate}`);
+  if (cpu_rate < 0.9) {
+    num_actions = 5;
+  } else {
+    num_actions = NUM_ACTIONS_MIN;
+  }
+  prev_cpu_rate = cpu_rate;
 
   if (eos_balance < 0.001) {
     console.error(
@@ -266,6 +290,7 @@ async function run() {
   }
 
   setInterval(run, 1000);
+  setInterval(adjust_num_actions, 15000); // adjust num_actions every 15 seconds
   if (argv.donation) {
     setInterval(donate, 10000); // 10 seconds
   }
