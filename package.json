@@ -1,6 +1,6 @@
 {
   "name": "eidos-miner",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "EIDOS miner",
   "main": "index.js",
   "bin": "index.js",

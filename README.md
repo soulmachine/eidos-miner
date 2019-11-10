@@ -8,9 +8,9 @@ EIDOS miner, 1000 times faster than your phone!
 
 ## Mine faster
 
-Since the EIDOS smart contract distributes 20 EIDSO per second, so fast will not help your get more, ideally, you should let your CPU consuming speed be equal to recover speed.
+Since the EIDOS smart contract distributes 20 EIDOS per second, so sending more transactions will **NOT** help your mine more coins, **ideally**, your CPU consuming speed should be equal to recover speed, so that you can play the game in every second.
 
-This miner sends a transaction per second, with 5 actions by default.
+This miner sends a transaction with 5 actions per second.
 
 If you have huge CPU, you can make it faster by increasing `num_actions`(default 5):
 
