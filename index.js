@@ -208,7 +208,7 @@ async function run() {
     const api = get_random_api();
     const cpu_rate = await get_cpu_rate(account, api.rpc);
     console.info(`CPU rate: ${(Math.floor(cpu_rate * 1000) / 10).toFixed(1)}%`);
-    if (cpu_rate > 0.9999) {
+    if (cpu_rate > 0.99) {
       // 1- (CPU Usage of one transaction / Total time rented)
       console.warn(
         '\x1b[31mCPU is too busy, will not send out transaction this time.\x1b[0m',
