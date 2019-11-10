@@ -142,29 +142,34 @@ async function send_eidos(from, to, quantity, memo = '') {
 let prev_eidos_balance = 0;
 
 async function donate() {
+  const DONATION_RATIO = 0.05; // 5%
   const current_eidos_balance = await query_eidos_balance(
     account,
     get_random_api().rpc,
     { fetch },
   );
   const increased = current_eidos_balance - prev_eidos_balance;
-  const eidos_to_donate = (increased * 0.05).toFixed(4);
-  if (eidos_to_donate != '0.0000') {
-    await send_eidos(
-      account,
-      'thinkmachine',
-      eidos_to_donate,
-      'donated from ' + account,
-    );
-    console.info('Donated ' + eidos_to_donate + ' EIDOS to the author.');
-    prev_eidos_balance = await query_eidos_balance(
-      account,
-      get_random_api().rpc,
-      {
-        fetch,
-      },
-    );
+  if (increased > 50) {
+    // It's impossible to mine over 50 EIDOS in 10 seconds, so
+    // this must be a new deposit coming in
+    return;
   }
+  const eidos_to_donate = (increased * DONATION_RATIO).toFixed(4);
+  if (eidos_to_donate < 0.0001) return;
+  await send_eidos(
+    account,
+    'thinkmachine',
+    eidos_to_donate,
+    'donated from ' + account,
+  );
+  console.info('Donated ' + eidos_to_donate + ' EIDOS to the author.');
+  prev_eidos_balance = await query_eidos_balance(
+    account,
+    get_random_api().rpc,
+    {
+      fetch,
+    },
+  );
 }
 
 function create_actions(num_actions, account) {
