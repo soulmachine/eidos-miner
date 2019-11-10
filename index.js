@@ -201,9 +201,8 @@ async function run_transaction(actions, api) {
 async function run() {
   try {
     const api = get_random_api();
-
     const cpu_rate = await get_cpu_rate(account, api.rpc);
-    console.info(`CPU rate: ${(cpu_rate * 100).toFixed(1)}%`);
+    console.info(`CPU rate: ${(Math.floor(cpu_rate * 1000) / 10).toFixed(1)}%`);
     if (cpu_rate > 0.9999) {
       // 1- (CPU Usage of one transaction / Total time rented)
       console.warn(
