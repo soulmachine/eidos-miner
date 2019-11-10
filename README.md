@@ -22,4 +22,4 @@ If you have huge CPU, you can make it faster by increasing `num_actions`(default
 
 ## Donation
 
-    This tool will donate 5% of mined EIDOS to the author by default, if you don't want to donate, you can disable it by passing `--donation false`.
+This tool will donate 5% of mined EIDOS to the author by default, if you don't want to donate, you can disable it by passing `--donation false`.
