@@ -207,8 +207,8 @@ const CPU_RATE_RED = 0.99; // Stop mining if CPU rate > 99%
 const NUM_ACTIONS_MIN = 2;
 const NUM_ACTIONS_MAX = 256;
 let num_actions = NUM_ACTIONS_MIN;
-let cpu_rate_ema_slow; // decay rate 0.95, recent 20 data points
-let cpu_rate_ema_fast; // decay rate 0.9, recent 10 data points
+let cpu_rate_ema_slow; // decay rate 0.999, recent 1000 data points
+let cpu_rate_ema_fast; // decay rate 0.5, recent 2 data points
 
 function adjust_num_actions() {
   console.info(
@@ -233,7 +233,7 @@ function adjust_num_actions() {
     // CPU rate changes over 0.5%
     if (
       Math.abs(cpu_rate_ema_fast - cpu_rate_ema_slow) / cpu_rate_ema_slow >
-      0.005
+      0.001
     ) {
       if (cpu_rate_ema_fast > cpu_rate_ema_slow) {
         if (num_actions > NUM_ACTIONS_MIN) {
@@ -264,8 +264,8 @@ async function run() {
     const api = get_random_api();
     const cpu_rate = await get_cpu_rate(account, api.rpc);
     // update EMA
-    cpu_rate_ema_fast = 0.9 * cpu_rate_ema_fast + 0.1 * cpu_rate;
-    cpu_rate_ema_slow = 0.95 * cpu_rate_ema_slow + 0.05 * cpu_rate;
+    cpu_rate_ema_fast = 0.5 * cpu_rate_ema_fast + 0.5 * cpu_rate;
+    cpu_rate_ema_slow = 0.999 * cpu_rate_ema_slow + 0.001 * cpu_rate;
     if (
       cpu_rate > CPU_RATE_RED ||
       cpu_rate_ema_fast > CPU_RATE_RED ||
@@ -331,7 +331,7 @@ async function run() {
   }
 
   setInterval(run, 1000); // Mine EIDOS every second
-  setInterval(adjust_num_actions, 10000); // adjust num_actions every 10 seconds
+  setInterval(adjust_num_actions, 30000); // adjust num_actions every 60 seconds
   if (argv.donation) {
     setInterval(donate, 30000); // 30 seconds
   }
