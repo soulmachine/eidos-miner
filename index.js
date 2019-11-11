@@ -214,7 +214,9 @@ function adjust_num_actions() {
   console.info(
     `cpu_rate_ema_fast=${format_cpu_rate(
       cpu_rate_ema_fast,
-    )}%, cpu_rate_ema_slow=${format_cpu_rate(cpu_rate_ema_slow)}%, num_actions=${num_actions}`,
+    )}%, cpu_rate_ema_slow=${format_cpu_rate(
+      cpu_rate_ema_slow,
+    )}%, num_actions=${num_actions}`,
   );
   if (cpu_rate_ema_fast < CPU_RATE_EXPECTATION) {
     num_actions = Math.min(Math.ceil(num_actions * 2), NUM_ACTIONS_MAX);
@@ -264,8 +266,11 @@ async function run() {
     // update EMA
     cpu_rate_ema_fast = 0.9 * cpu_rate_ema_fast + 0.1 * cpu_rate;
     cpu_rate_ema_slow = 0.95 * cpu_rate_ema_slow + 0.05 * cpu_rate;
-    console.info(`CPU rate: ${format_cpu_rate(cpu_rate)}%`);
-    if (cpu_rate > CPU_RATE_RED) {
+    if (
+      cpu_rate > CPU_RATE_RED ||
+      cpu_rate_ema_fast > CPU_RATE_RED ||
+      cpu_rate_ema_slow > CPU_RATE_RED
+    ) {
       // 1- (CPU Usage of one transaction / Total time rented)
       console.warn(
         '\x1b[31mCPU is too busy, will not send out transaction this time.\x1b[0m',
@@ -279,7 +284,6 @@ async function run() {
       { fetch },
     );
 
-    console.info('Sending a transaction...');
     actions = create_actions(num_actions, account);
     await run_transaction(actions, api);
 
