@@ -10,6 +10,10 @@ EIDOS miner, 1000 times faster than your phone!
 
 This miner automatically adjusts its speed, so you don't need to worry about the performance.
 
+If you do want to specify `num_actions` by yourself, set it as the following:
+
+    npx eidos-miner --account your_eos_account --private_key your_private_key --num_actions 8
+
 Under the hood, this miner sends one transaction with several(let's say `num_actions`) actions per second. The larger `num_actions` the faster it mines. But large `num_actions` is **NOT** always good, for example, if you use all your CPU in a very shot time, you do get a lot of coins very quickly, but you're not able to send any transaction in the next few hours, which means you lose the chance to play the game until your CPU recover.
 
 Since the EIDOS smart contract distributes EIDOS in constant speed, i.e., 20 EIDOS to miners per second, **ideally** you should also spend your CPU in a constant speed, so that you can participate in the game every second.

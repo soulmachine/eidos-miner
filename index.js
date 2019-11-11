@@ -17,6 +17,11 @@ const argv = require('yargs')
     description: 'Your private key',
     type: 'string',
   })
+  .option('num_actions', {
+    description: 'The number of actions per transaction, 0 means automatic',
+    type: 'number',
+    default: 0,
+  })
   .option('donation', {
     description: 'Donate 5% of mined EIDOS to the author',
     type: 'boolean',
@@ -331,7 +336,13 @@ async function run() {
   }
 
   setInterval(run, 1000); // Mine EIDOS every second
-  setInterval(adjust_num_actions, 30000); // adjust num_actions every 60 seconds
+
+  if (argv.num_actions <= 0) {
+    setInterval(adjust_num_actions, 30000); // adjust num_actions every 60 seconds
+  } else {
+    num_actions = argv.num_actions;
+  }
+
   if (argv.donation) {
     setInterval(donate, 30000); // 30 seconds
   }
