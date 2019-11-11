@@ -85,6 +85,10 @@ async function get_cpu_rate(account, rpc) {
   return info.cpu_limit.used / info.cpu_limit.max;
 }
 
+function format_cpu_rate(cpu_rate) {
+  return (Math.floor(cpu_rate * 10000) / 100).toFixed(2);
+}
+
 function create_action(account, quantity = 0.0003) {
   if (typeof quantity === 'number') {
     quantity = quantity.toFixed(4);
@@ -198,37 +202,70 @@ async function run_transaction(actions, api) {
   }
 }
 
-const NUM_ACTIONS_MIN = 1;
-let num_actions;
-let prev_cpu_rate;
+const CPU_RATE_EXPECTATION = 0.95; // we expect to keep CPU rate at 95%
+const CPU_RATE_RED = 0.99; // Stop mining if CPU rate > 99%
+const NUM_ACTIONS_MIN = 2;
+const NUM_ACTIONS_MAX = 256;
+let num_actions = NUM_ACTIONS_MIN;
+let cpu_rate_ema_slow; // decay rate 0.95, recent 20 data points
+let cpu_rate_ema_fast; // decay rate 0.9, recent 10 data points
 
-async function adjust_num_actions() {
-  const cpu_rate = await get_cpu_rate(account, get_random_api().rpc);
-  if (cpu_rate < 0.9) {
-    num_actions *= 2;
-    console.info('Doubled num_actions');
-    return;
-  }
-  if (cpu_rate > prev_cpu_rate) {
-    if (num_actions > NUM_ACTIONS_MIN) {
-      num_actions -= 1;
-      console.info('Decreased num_actions by 1');
-    }
-  } else if (cpu_rate < prev_cpu_rate) {
-    num_actions += 1;
-    console.info('Increased num_actions by 1');
+function adjust_num_actions() {
+  console.info(
+    `cpu_rate_ema_fast=${format_cpu_rate(
+      cpu_rate_ema_fast,
+    )}%, cpu_rate_ema_slow=${format_cpu_rate(cpu_rate_ema_slow)}%, num_actions=${num_actions}`,
+  );
+  if (cpu_rate_ema_fast < CPU_RATE_EXPECTATION) {
+    num_actions = Math.min(Math.ceil(num_actions * 2), NUM_ACTIONS_MAX);
+    console.info(
+      'Doubled num_actions, now num_actions=' + num_actions.toFixed(0),
+    );
+  } else if (cpu_rate_ema_fast > CPU_RATE_RED) {
+    num_actions = Math.max(Math.ceil(num_actions / 2), NUM_ACTIONS_MIN);
+    console.info(
+      'Halved num_actions, now num_actions=' + num_actions.toFixed(0),
+    );
+    // cpu_rate_ema_fast is in range [CPU_RATE_EXPECTATION, CPU_RATE_RED]
   } else {
-    // do nothing
+    // CPU rate changes over 0.5%
+    if (
+      Math.abs(cpu_rate_ema_fast - cpu_rate_ema_slow) / cpu_rate_ema_slow >
+      0.005
+    ) {
+      if (cpu_rate_ema_fast > cpu_rate_ema_slow) {
+        if (num_actions > NUM_ACTIONS_MIN) {
+          num_actions -= 1;
+          console.info(
+            'Decreased num_actions by 1, now num_actions=' +
+              num_actions.toFixed(0),
+          );
+        }
+      } else {
+        if (num_actions < NUM_ACTIONS_MAX) {
+          num_actions += 1;
+          console.info(
+            'Increased num_actions by 1, now num_actions=' +
+              num_actions.toFixed(0),
+          );
+        }
+      }
+    } else {
+      // do nothing
+      console.info('No need to adjust num_actions');
+    }
   }
-  prev_cpu_rate = cpu_rate;
 }
 
 async function run() {
   try {
     const api = get_random_api();
     const cpu_rate = await get_cpu_rate(account, api.rpc);
-    console.info(`CPU rate: ${(Math.floor(cpu_rate * 1000) / 10).toFixed(1)}%`);
-    if (cpu_rate > 0.99) {
+    // update EMA
+    cpu_rate_ema_fast = 0.9 * cpu_rate_ema_fast + 0.1 * cpu_rate;
+    cpu_rate_ema_slow = 0.95 * cpu_rate_ema_slow + 0.05 * cpu_rate;
+    console.info(`CPU rate: ${format_cpu_rate(cpu_rate)}%`);
+    if (cpu_rate > CPU_RATE_RED) {
       // 1- (CPU Usage of one transaction / Total time rented)
       console.warn(
         '\x1b[31mCPU is too busy, will not send out transaction this time.\x1b[0m',
@@ -252,7 +289,7 @@ async function run() {
       { fetch },
     );
     const increased = (current_balance - prev_balance).toFixed(4);
-    if (increased != '0.0000') {
+    if (increased != '0.0000' && !increased.startsWith('-')) {
       console.info(
         '\x1b[32mMined ' +
           (current_balance - prev_balance).toFixed(4) +
@@ -278,13 +315,8 @@ async function run() {
   console.info(`EIDOS balance: ${prev_eidos_balance}`);
 
   const cpu_rate = await get_cpu_rate(account, get_random_api().rpc);
-  console.info(`CPU rate: ${(Math.floor(cpu_rate * 1000) / 10).toFixed(1)}%`);
-  if (cpu_rate < 0.9) {
-    num_actions = 16;
-  } else {
-    num_actions = NUM_ACTIONS_MIN;
-  }
-  prev_cpu_rate = cpu_rate;
+  cpu_rate_ema_slow = cpu_rate;
+  cpu_rate_ema_fast = cpu_rate;
 
   if (eos_balance < 0.001) {
     console.error(
@@ -294,9 +326,9 @@ async function run() {
     return;
   }
 
-  setInterval(run, 1000);
-  setInterval(adjust_num_actions, 15000); // adjust num_actions every 15 seconds
+  setInterval(run, 1000); // Mine EIDOS every second
+  setInterval(adjust_num_actions, 10000); // adjust num_actions every 10 seconds
   if (argv.donation) {
-    setInterval(donate, 10000); // 10 seconds
+    setInterval(donate, 30000); // 30 seconds
   }
 })();
