@@ -204,7 +204,7 @@ async function run_transaction(actions, api) {
 
 const CPU_RATE_EXPECTATION = 0.95; // we expect to keep CPU rate at 95%
 const CPU_RATE_RED = 0.99; // Stop mining if CPU rate > 99%
-const NUM_ACTIONS_MIN = 2;
+const NUM_ACTIONS_MIN = 4;
 const NUM_ACTIONS_MAX = 256;
 let num_actions = NUM_ACTIONS_MIN;
 let cpu_rate_ema_slow; // decay rate 0.999, recent 1000 data points
