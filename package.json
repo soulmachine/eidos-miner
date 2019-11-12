@@ -4,8 +4,13 @@
   "description": "EIDOS miner",
   "main": "index.js",
   "bin": "index.js",
+  "files": [
+    "index.js"
+  ],
   "scripts": {
     "start": "node ./index.js",
+    "check-type": "tsc -p tsconfig.json",
+    "prettier": "prettier -c --write '**/*'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -24,5 +29,11 @@
     "eosjs": "^20.0.0",
     "node-fetch": "^2.6.0",
     "yargs": "^14.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^12.12.7",
+    "@types/node-fetch": "^2.5.3",
+    "@types/yargs": "^13.0.3",
+    "typescript": "^3.7.2"
   }
 }

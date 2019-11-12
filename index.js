@@ -27,10 +27,7 @@ const argv = require('yargs')
     type: 'boolean',
     default: true,
   })
-  .demandOption(
-    ['private_key', 'account'],
-    'Please provide both private_key and account',
-  )
+  .demandOption(['private_key', 'account'], 'Please provide both private_key and account')
   .check(function(argv) {
     if (isValidPrivate(argv.private_key)) {
       return true;
@@ -65,39 +62,48 @@ function get_random_api() {
   return APIs[index];
 }
 
+/**
+ * @param {string} account - EOS account, 12 letters.
+ * @param {JsonRpc} rpc - JsonRpc.
+ */
 async function query_eos_balance(account, rpc) {
-  const balance_info = await rpc.get_currency_balance(
-    'eosio.token',
-    account,
-    'EOS',
-  );
+  const balance_info = await rpc.get_currency_balance('eosio.token', account, 'EOS');
   const balance = parseFloat(balance_info[0].split(' ')[0]);
   return balance;
 }
 
+/**
+ * @param {string} account - EOS account, 12 letters.
+ * @param {JsonRpc} rpc - JsonRpc.
+ */
 async function query_eidos_balance(account, rpc) {
-  const balance_info = await rpc.get_currency_balance(
-    'eidosonecoin',
-    account,
-    'EIDOS',
-  );
+  const balance_info = await rpc.get_currency_balance('eidosonecoin', account, 'EIDOS');
   const balance = parseFloat(balance_info[0].split(' ')[0]);
   return balance;
 }
 
+/**
+ * @param {string} account - EOS account, 12 letters.
+ * @param {JsonRpc} rpc - JsonRpc.
+ */
 async function get_cpu_rate(account, rpc) {
   const info = await rpc.get_account(account);
   return info.cpu_limit.used / info.cpu_limit.max;
 }
 
+/**
+ * @param {number} cpu_rate - CPU ultilization rate.
+ */
 function format_cpu_rate(cpu_rate) {
   return (Math.floor(cpu_rate * 10000) / 100).toFixed(2);
 }
 
-function create_action(account, quantity = 0.0003) {
-  if (typeof quantity === 'number') {
-    quantity = quantity.toFixed(4);
-  }
+/**
+ * @param {string} account - EOS account, 12 letters.
+ * @param {string} quantity - EOS quantity.
+ * @returns {Object}
+ */
+function create_action(account, quantity = '0.0003') {
   assert(typeof quantity === 'string');
 
   return {
@@ -118,10 +124,13 @@ function create_action(account, quantity = 0.0003) {
   };
 }
 
+/**
+ * @param {string} from - EOS account, 12 letters.
+ * @param {string} to - EOS account, 12 letters.
+ * @param {string} quantity - EIDOS quantity.
+ * @param {string} memo - memo.
+ */
 async function send_eidos(from, to, quantity, memo = '') {
-  if (typeof quantity === 'number') {
-    quantity = quantity.toFixed(4);
-  }
   assert(typeof quantity === 'string');
   const action = {
     account: 'eidosonecoin',
@@ -147,42 +156,44 @@ let prev_eidos_balance = 0;
 
 async function donate() {
   const DONATION_RATIO = 0.05; // 5%
-  const current_eidos_balance = await query_eidos_balance(
-    account,
-    get_random_api().rpc,
-    { fetch },
-  );
+  const current_eidos_balance = await query_eidos_balance(account, get_random_api().rpc, { fetch });
   const increased = current_eidos_balance - prev_eidos_balance;
   if (increased > 50) {
     // It's impossible to mine over 50 EIDOS in 10 seconds, so
     // this must be a new deposit coming in
     return;
   }
-  const eidos_to_donate = (increased * DONATION_RATIO).toFixed(4);
-  if (eidos_to_donate < 0.0001) return;
-  await send_eidos(
-    account,
-    'thinkmachine',
-    eidos_to_donate,
-    'donated from ' + account,
-  );
-  console.info('Donated ' + eidos_to_donate + ' EIDOS to the author.');
-  prev_eidos_balance = await query_eidos_balance(
-    account,
-    get_random_api().rpc,
-    {
-      fetch,
-    },
-  );
+  const eidos_to_donate = increased * DONATION_RATIO;
+  if (eidos_to_donate < 0.0001) {
+    // too small
+    return;
+  }
+  const eidos_to_donate_str = eidos_to_donate.toFixed(4);
+  await send_eidos(account, 'thinkmachine', eidos_to_donate_str, 'donated from ' + account);
+  console.info('Donated ' + eidos_to_donate_str + ' EIDOS to the author.');
+  prev_eidos_balance = await query_eidos_balance(account, get_random_api().rpc, {
+    fetch,
+  });
 }
 
+/**
+ * @param {number} num_actions - Number of actions.
+ * @param {string} account - EOS account, 12 letters.
+ * @returns {Array<Object>}
+ */
 function create_actions(num_actions, account) {
   const quantities = Array(num_actions)
-    .fill()
-    .map(() => Math.ceil(Math.random() * 3) * 0.0001);
+    .fill(0.0)
+    .map(() => Math.ceil(Math.random() * 3) * 0.0001)
+    .map(x => x.toFixed(4));
   return quantities.map(quantity => create_action(account, quantity));
 }
 
+/**
+ * @param {Array<Object>} actions - Number of actions.
+ * @param {Api} api - EOS account, 12 letters.
+ * @returns {Promise<Object|undefined>}
+ */
 async function run_transaction(actions, api) {
   try {
     const result = await api.transact(
@@ -212,49 +223,34 @@ const CPU_RATE_RED = 0.99; // Stop mining if CPU rate > 99%
 const NUM_ACTIONS_MIN = 4;
 const NUM_ACTIONS_MAX = 256;
 let num_actions = NUM_ACTIONS_MIN;
-let cpu_rate_ema_slow; // decay rate 0.999, recent 1000 data points
-let cpu_rate_ema_fast; // decay rate 0.5, recent 2 data points
+let cpu_rate_ema_slow = 0.0; // decay rate 0.999, recent 1000 data points
+let cpu_rate_ema_fast = 0.0; // decay rate 0.5, recent 2 data points
 
 function adjust_num_actions() {
   console.info(
-    `cpu_rate_ema_fast=${format_cpu_rate(
-      cpu_rate_ema_fast,
-    )}%, cpu_rate_ema_slow=${format_cpu_rate(
+    `cpu_rate_ema_fast=${format_cpu_rate(cpu_rate_ema_fast)}%, cpu_rate_ema_slow=${format_cpu_rate(
       cpu_rate_ema_slow,
     )}%, num_actions=${num_actions}`,
   );
   if (cpu_rate_ema_fast < CPU_RATE_EXPECTATION) {
     num_actions = Math.min(Math.ceil(num_actions * 2), NUM_ACTIONS_MAX);
-    console.info(
-      'Doubled num_actions, now num_actions=' + num_actions.toFixed(0),
-    );
+    console.info('Doubled num_actions, now num_actions=' + num_actions.toFixed(0));
   } else if (cpu_rate_ema_fast > CPU_RATE_RED) {
     num_actions = Math.max(Math.ceil(num_actions / 2), NUM_ACTIONS_MIN);
-    console.info(
-      'Halved num_actions, now num_actions=' + num_actions.toFixed(0),
-    );
+    console.info('Halved num_actions, now num_actions=' + num_actions.toFixed(0));
     // cpu_rate_ema_fast is in range [CPU_RATE_EXPECTATION, CPU_RATE_RED]
   } else {
     // CPU rate changes over 0.5%
-    if (
-      Math.abs(cpu_rate_ema_fast - cpu_rate_ema_slow) / cpu_rate_ema_slow >
-      0.001
-    ) {
+    if (Math.abs(cpu_rate_ema_fast - cpu_rate_ema_slow) / cpu_rate_ema_slow > 0.001) {
       if (cpu_rate_ema_fast > cpu_rate_ema_slow) {
         if (num_actions > NUM_ACTIONS_MIN) {
           num_actions -= 1;
-          console.info(
-            'Decreased num_actions by 1, now num_actions=' +
-              num_actions.toFixed(0),
-          );
+          console.info('Decreased num_actions by 1, now num_actions=' + num_actions.toFixed(0));
         }
       } else {
         if (num_actions < NUM_ACTIONS_MAX) {
           num_actions += 1;
-          console.info(
-            'Increased num_actions by 1, now num_actions=' +
-              num_actions.toFixed(0),
-          );
+          console.info('Increased num_actions by 1, now num_actions=' + num_actions.toFixed(0));
         }
       }
     } else {
@@ -277,32 +273,20 @@ async function run() {
       cpu_rate_ema_slow > CPU_RATE_RED
     ) {
       // 1- (CPU Usage of one transaction / Total time rented)
-      console.warn(
-        '\x1b[31mCPU is too busy, will not send out transaction this time.\x1b[0m',
-      );
+      console.warn('\x1b[31mCPU is too busy, will not send out transaction this time.\x1b[0m');
       return;
     }
 
-    const prev_balance = await query_eidos_balance(
-      account,
-      get_random_api().rpc,
-      { fetch },
-    );
+    const prev_balance = await query_eidos_balance(account, get_random_api().rpc, { fetch });
 
-    actions = create_actions(num_actions, account);
+    const actions = create_actions(num_actions, account);
     await run_transaction(actions, api);
 
-    const current_balance = await query_eidos_balance(
-      account,
-      get_random_api().rpc,
-      { fetch },
-    );
+    const current_balance = await query_eidos_balance(account, get_random_api().rpc, { fetch });
     const increased = (current_balance - prev_balance).toFixed(4);
     if (increased != '0.0000' && !increased.startsWith('-')) {
       console.info(
-        '\x1b[32mMined ' +
-          (current_balance - prev_balance).toFixed(4) +
-          ' EIDOS !!!\x1b[0m',
+        '\x1b[32mMined ' + (current_balance - prev_balance).toFixed(4) + ' EIDOS !!!\x1b[0m',
       );
     }
   } catch (e) {
@@ -316,11 +300,7 @@ async function run() {
   });
   console.info(`EOS balance: ${eos_balance}`);
 
-  prev_eidos_balance = await query_eidos_balance(
-    account,
-    get_random_api().rpc,
-    { fetch },
-  );
+  prev_eidos_balance = await query_eidos_balance(account, get_random_api().rpc, { fetch });
   console.info(`EIDOS balance: ${prev_eidos_balance}`);
 
   const cpu_rate = await get_cpu_rate(account, get_random_api().rpc);

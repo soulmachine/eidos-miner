@@ -1,0 +1,10 @@
+package.json
+package-lock.json
+node_modules/
+LICENSE
+.gitattributes
+.gitignore
+.prettierignore
+.DS_Store
+.editorconfig
+.eslintignore
