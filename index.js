@@ -2,6 +2,8 @@
 
 const assert = require('assert');
 const fetch = require('node-fetch'); // node only; not needed in browsers
+const chalk = require('chalk');
+const figlet = require('figlet');
 
 const { Api, JsonRpc, RpcError } = require('eosjs');
 const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig'); // development only
@@ -273,7 +275,7 @@ async function run() {
       cpu_rate_ema_slow > CPU_RATE_RED
     ) {
       // 1- (CPU Usage of one transaction / Total time rented)
-      console.warn('\x1b[31mCPU is too busy, will not send out transaction this time.\x1b[0m');
+      console.warn(chalk.red('CPU is too busy, will not send out transaction this time.'));
       return;
     }
 
@@ -286,7 +288,7 @@ async function run() {
     const increased = (current_balance - prev_balance).toFixed(4);
     if (increased != '0.0000' && !increased.startsWith('-')) {
       console.info(
-        '\x1b[32mMined ' + (current_balance - prev_balance).toFixed(4) + ' EIDOS !!!\x1b[0m',
+        chalk.green('Mined ' + (current_balance - prev_balance).toFixed(4) + ' EIDOS !!!'),
       );
     }
   } catch (e) {
@@ -295,6 +297,8 @@ async function run() {
 }
 
 (async () => {
+  console.info(chalk.green(figlet.textSync('EIDOS  Miner')));
+
   const eos_balance = await query_eos_balance(account, get_random_api().rpc, {
     fetch,
   });
