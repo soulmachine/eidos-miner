@@ -50,7 +50,7 @@ const BP_SEED_LIST = [
   "https://eos.infstones.io",
   "https://bp.whaleex.com",
   "https://api.helloeos.com.cn",
-  "http://api-mainnet.starteos.io",
+  "https://bp.cryptolions.io",
   "https://api.eosn.io",
 ];
 
