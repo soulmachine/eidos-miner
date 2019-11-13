@@ -1,12 +1,16 @@
 {
   "name": "eidos-miner",
-  "version": "2.1.3",
+  "version": "2.1.4",
   "description": "EIDOS miner",
   "main": "index.js",
   "bin": "index.js",
   "files": [
     "index.js"
   ],
+  "preferGlobal": true,
+  "engines": {
+    "node": ">=10"
+  },
   "scripts": {
     "start": "node ./index.js",
     "check-type": "tsc -p tsconfig.json",
