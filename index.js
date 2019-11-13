@@ -44,8 +44,14 @@ const signatureProvider = new JsSignatureProvider([argv.private_key]);
 const BP_SEED_LIST = [
   'https://mainnet.meet.one',
   'https://eos.newdex.one',
-  'https://eospush.tokenpocket.pro',
   'https://node.betdice.one',
+  "https://api.redpacketeos.com",
+  "https://api.eoseoul.io",
+  "https://eos.infstones.io",
+  "https://bp.whaleex.com",
+  "https://api.helloeos.com.cn",
+  "http://api-mainnet.starteos.io",
+  "https://api.eosn.io",
 ];
 
 const APIs = BP_SEED_LIST.map(function(url) {
