@@ -4,39 +4,43 @@ const assert = require('assert');
 const fetch = require('node-fetch'); // node only; not needed in browsers
 const chalk = require('chalk');
 const figlet = require('figlet');
+const yargs = require('yargs');
 
 const { Api, JsonRpc, RpcError } = require('eosjs');
 const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig'); // development only
 const { TextEncoder, TextDecoder } = require('util'); // node only; native TextEncoder/Decoder
 const { isValidPrivate, privateToPublic } = require('eosjs-ecc');
 
-const argv = require('yargs')
-  .option('account', {
-    description: 'Your EOS account, must be 12 letters',
-    type: 'string',
+const { argv } = yargs
+  .options({
+    account: {
+      description: 'Your EOS account, must be 12 letters',
+      type: 'string',
+      demandOption: true,
+    },
+    private_key: {
+      description: 'Your private key',
+      type: 'string',
+      demandOption: true,
+    },
+    num_actions: {
+      description: 'The number of actions per transaction, 0 means automatic',
+      type: 'number',
+      default: 0,
+    },
+    donation: {
+      description: 'Donate 5% of mined EIDOS to the author',
+      type: 'boolean',
+      default: true,
+    },
   })
-  .option('private_key', {
-    description: 'Your private key',
-    type: 'string',
-  })
-  .option('num_actions', {
-    description: 'The number of actions per transaction, 0 means automatic',
-    type: 'number',
-    default: 0,
-  })
-  .option('donation', {
-    description: 'Donate 5% of mined EIDOS to the author',
-    type: 'boolean',
-    default: true,
-  })
-  .demandOption(['private_key', 'account'], 'Please provide both private_key and account')
   .check(function(argv) {
     if (isValidPrivate(argv.private_key)) {
       return true;
     } else {
       throw new Error('Error: private_key is invalid!');
     }
-  }).argv;
+  });
 
 const account = argv.account;
 const signatureProvider = new JsSignatureProvider([argv.private_key]);
@@ -45,13 +49,13 @@ const BP_SEED_LIST = [
   'https://mainnet.meet.one',
   'https://eos.newdex.one',
   'https://node.betdice.one',
-  "https://api.redpacketeos.com",
-  "https://api.eoseoul.io",
-  "https://eos.infstones.io",
-  "https://bp.whaleex.com",
-  "https://api.helloeos.com.cn",
-  "https://bp.cryptolions.io",
-  "https://api.eosn.io",
+  'https://api.redpacketeos.com',
+  'https://api.eoseoul.io',
+  'https://eos.infstones.io',
+  'https://bp.whaleex.com',
+  'https://api.helloeos.com.cn',
+  'https://bp.cryptolions.io',
+  'https://api.eosn.io',
 ];
 
 const APIs = BP_SEED_LIST.map(function(url) {
@@ -197,12 +201,19 @@ function create_actions(num_actions, account) {
   return quantities.map(quantity => create_action(account, quantity));
 }
 
+let cpu_usage_exceeded = false;
+
 /**
  * @param {Array<Object>} actions - Number of actions.
  * @param {Api} api - EOS account, 12 letters.
  * @returns {Promise<Object|undefined>}
  */
 async function run_transaction(actions, api) {
+  if (cpu_usage_exceeded) {
+    cpu_usage_exceeded = false;
+    return;
+  }
+
   try {
     const result = await api.transact(
       {
@@ -213,16 +224,21 @@ async function run_transaction(actions, api) {
         expireSeconds: 300,
       },
     );
+    cpu_usage_exceeded = false;
     return result;
   } catch (e) {
-    if (!e.toString().includes('duplicate transaction')) {
-      console.log('\nCaught exception: ' + e);
-      if (e instanceof RpcError) {
-        console.log(JSON.stringify(e.json, null, 2));
-      } else {
-        console.error(e);
-      }
+    if (e instanceof RpcError) {
+      console.log(JSON.stringify(e.json, null, 2));
+      return;
     }
+
+    if (
+      e.toString().includes('is greater than the maximum billable CPU time for the transaction')
+    ) {
+      cpu_usage_exceeded = true;
+      return;
+    }
+    console.error(e);
   }
 }
 
