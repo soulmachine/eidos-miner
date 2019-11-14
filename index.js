@@ -236,6 +236,7 @@ async function run_transaction(actions, api) {
       e.toString().includes('is greater than the maximum billable CPU time for the transaction')
     ) {
       cpu_usage_exceeded = true;
+      console.warn(chalk.red('CPU usage exceeded, will not send out a transaction this time'));
       return;
     }
     console.error(e);
