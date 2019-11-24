@@ -46,7 +46,7 @@ const { argv } = yargs
 const account = argv.account;
 const signatureProvider = new JsSignatureProvider([argv.private_key]);
 
-let API_ENDPOINTS = [
+const API_ENDPOINTS = [
   'https://mainnet.meet.one',
   'https://eos.newdex.one',
   'https://node.betdice.one',
@@ -75,7 +75,7 @@ function create_api(url) {
   return api;
 }
 
-let APIs = API_ENDPOINTS.map(url => create_api(url));
+const APIs = API_ENDPOINTS.map(url => create_api(url));
 
 function get_random_api() {
   const index = Math.floor(Math.random() * APIs.length);
@@ -359,8 +359,10 @@ async function run() {
   }
 
   setInterval(async () => {
-    API_ENDPOINTS = (await getApiEndpoints()).map(x => x.url);
-    APIs = API_ENDPOINTS.map(url => create_api(url));
+    const api_endpoints = (await getApiEndpoints()).map(x => x.url);
+    API_ENDPOINTS.splice(0, API_ENDPOINTS.length, ...api_endpoints);
+    const apis = API_ENDPOINTS.map(url => create_api(url));
+    APIs.splice(0, APIs.length, ...apis);
   }, 1000 * 3600); // update API_ENDPOINTS and APIs every hour
 
   if (argv.donation) {
