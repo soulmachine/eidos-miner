@@ -5,8 +5,8 @@
     "checkJs": true,
     "noEmit": true,
     "strict": true /* Enable all strict type-checking options. */,
-    "target": "es2019",
-    "lib": ["es2019"]
+    "target": "es2017",
+    "lib": ["esnext"]
   },
   "files": ["index.js"],
   "exclude": ["node_modules"]

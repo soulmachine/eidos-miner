@@ -5,6 +5,7 @@ const fetch = require('node-fetch'); // node only; not needed in browsers
 const chalk = require('chalk');
 const figlet = require('figlet');
 const yargs = require('yargs');
+const getApiEndpoints = require('eos-endpoint').default;
 
 const { Api, JsonRpc, RpcError } = require('eosjs');
 const { JsSignatureProvider } = require('eosjs/dist/eosjs-jssig'); // development only
@@ -45,7 +46,7 @@ const { argv } = yargs
 const account = argv.account;
 const signatureProvider = new JsSignatureProvider([argv.private_key]);
 
-const BP_SEED_LIST = [
+let API_ENDPOINTS = [
   'https://mainnet.meet.one',
   'https://eos.newdex.one',
   'https://node.betdice.one',
@@ -58,7 +59,12 @@ const BP_SEED_LIST = [
   'https://api.eosn.io',
 ];
 
-const APIs = BP_SEED_LIST.map(function(url) {
+/**
+ * Create an Api object given an url.
+ *
+ * @param {string} url API endpoint
+ */
+function create_api(url) {
   const rpc = new JsonRpc(url, { fetch });
   const api = new Api({
     rpc,
@@ -67,7 +73,9 @@ const APIs = BP_SEED_LIST.map(function(url) {
     textEncoder: new TextEncoder(),
   });
   return api;
-});
+}
+
+let APIs = API_ENDPOINTS.map(url => create_api(url));
 
 function get_random_api() {
   const index = Math.floor(Math.random() * APIs.length);
@@ -349,6 +357,11 @@ async function run() {
   } else {
     num_actions = argv.num_actions;
   }
+
+  setInterval(async () => {
+    API_ENDPOINTS = (await getApiEndpoints()).map(x => x.url);
+    APIs = API_ENDPOINTS.map(url => create_api(url));
+  }, 1000 * 3600); // update API_ENDPOINTS and APIs every hour
 
   if (argv.donation) {
     setInterval(donate, 30000); // 30 seconds

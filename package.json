@@ -1,6 +1,6 @@
 {
   "name": "eidos-miner",
-  "version": "2.1.6",
+  "version": "2.1.7",
   "description": "EIDOS miner",
   "main": "index.js",
   "bin": "index.js",
@@ -31,16 +31,17 @@
   "dependencies": {
     "assert": "^2.0.0",
     "chalk": "^3.0.0",
+    "eos-endpoint": "^1.0.1",
     "eosjs": "^20.0.0",
     "figlet": "^1.2.4",
     "node-fetch": "^2.6.0",
-    "yargs": "^14.2.0"
+    "yargs": "^15.0.2"
   },
   "devDependencies": {
     "@types/chalk": "^2.2.0",
     "@types/figlet": "^1.2.0",
-    "@types/node": "^12.12.7",
-    "@types/node-fetch": "^2.5.3",
+    "@types/node": "^12.12.12",
+    "@types/node-fetch": "^2.5.4",
     "@types/yargs": "^13.0.3",
     "typescript": "^3.7.2"
   }

@@ -2,6 +2,8 @@
 
 EIDOS miner, 1000 times faster than your phone!
 
+[![Version npm](https://img.shields.io/npm/v/eidos-miner.svg?style=flat-square)](https://www.npmjs.com/package/eidos-miner)[![NPM downloads](http://img.shields.io/npm/dm/eidos-miner.svg?style=flat-square)](http://npmjs.com/eidos-miner)
+
 ## Start mining
 
     npx eidos-miner --account your_eos_account --private_key your_private_key
